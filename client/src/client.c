@@ -12,26 +12,32 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <string.h>
+#include <openssl/sha.h>
 
 // Define Size and Error Variables */
-#define MSG_SIZE 50
-#define RPLY_SIZE 20
-#define INIT_FAIL 0x57
-#define MSG_MEM_ALLOC_FAIL 0x43
-#define SRV_MEM_ALLOC_FAIL 0x68
-#define INIT_SUCCESS 0x32
-#define CONNECT_SUCCESS 0x52
-#define CONNECT_FAIL 0x17
-#define SOCK_CREATE_FAIL 0x28
-#define SOCK_CREATE_SUCCESS 0x11
-#define SEND_FAIL 0x3
-#define RECV_FAIL 0x7
-#define COMMUNICATE_SUCCESS 0x77
-#define CT_FAIL 0x63
+#define MSG_SIZE		50
+#define RPLY_SIZE		20
+#define HASH_SIZE		256
+#define TOTAL			512
+#define INIT_FAIL		0x03
+#define MSG_MEM_ALLOC_FAIL	0x07
+#define SRV_MEM_ALLOC_FAIL	0x11
+#define INIT_SUCCESS		0x15
+#define CONNECT_SUCCESS		0x19
+#define CONNECT_FAIL		0x23
+#define SOCK_CREATE_FAIL	0x27
+#define SOCK_CREATE_SUCCESS	0x31
+#define SEND_FAIL		0x35
+#define RECV_FAIL		0x39
+#define COMMUNICATE_SUCCESS	0x43
+#define CT_FAIL			0x47
+#define HASH_ALLOC_FAIL		0x51
+#define TOTAL_FAIL		0x55
 
 extern int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 extern int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key, unsigned char *iv, unsigned char *ciphertext);
 extern void handleErrors(void);
+extern unsigned char* hash_data(const char* data);
 
 // Declaration of Global Variables and Initialization of pointers to NULL */
 int sockt = 0;									// Socket used to communicate with the server
@@ -40,11 +46,16 @@ uint8_t *message = NULL;							// Password from input
 char *server_reply = NULL;							// Reply from server
 int send_state = 0;
 int recv_state = 0;
+int sendtotal_len = 0;
 int status = 0;
 uint8_t *key = NULL;
 uint8_t *iv = NULL;
 uint8_t *ciphertext = NULL;
+uint8_t *hashedpass = NULL;
+uint8_t *sendtotal = NULL;
 int ciphertext_len;
+uint8_t *test = NULL;
+
 
 // Main function for testing */
 int main()
@@ -90,10 +101,28 @@ int initialize_var(void)
 				status = CT_FAIL;
 			}
 			else
-			{		
-				status = INIT_SUCCESS;
-				key = (uint8_t *)"01234567890123456789012345678901";
-				iv = (uint8_t *)"0123456789012345";
+			{
+				test = (uint8_t *)calloc(HASH_SIZE,sizeof(uint8_t));
+				hashedpass = (uint8_t *)calloc(HASH_SIZE,sizeof(uint8_t));
+				if(hashedpass < 0)
+				{
+					status = HASH_ALLOC_FAIL;
+				}
+				else
+				{	
+					sendtotal = (uint8_t *)calloc(TOTAL,sizeof(uint8_t));
+			
+					if(sendtotal < 0)
+					{
+						status = TOTAL_FAIL;
+					}
+					else
+					{
+						status = INIT_SUCCESS;
+						key = (uint8_t *)"01234567890123456789012345678901";
+						iv = (uint8_t *)"0123456789012345";
+					}
+				}
 			}
 		}
 	}
@@ -159,8 +188,47 @@ int communicate(void)
 		}
 
 		ciphertext_len = encrypt(message, message_len, key, iv, ciphertext);
+		message[strcspn((const char *)message, "\n")] = 0;
+		hashedpass = hash_data((const char *)message);
+		
+		/*uint8_t *cyber = NULL;
+		cyber = hash_data("cybernet");
+		printf("\n\nCYBER\n\n");
+		BIO_dump_fp(stdout, (const char *)cyber, strlen((const char *)cyber));*/
+		
+		/*printf("HASH VALUE = ");
+		for(int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
+		{
+			printf("%x", hashedpass[i]);
+		}
 
-		send_state = send(sockt, ciphertext, ciphertext_len, 0);	// Send Password to Server
+		printf("\n");*/
+
+		memcpy(test,hashedpass,64);
+
+		strcpy((char *)sendtotal,(const char *)ciphertext);
+		strcat((char *)sendtotal,":");
+		strcat((char *)sendtotal,(const char *)test);
+		strcat((char *)sendtotal,"\0");
+
+		for(int i = 0; sendtotal[i] != '\0'; i++)
+		{
+			sendtotal_len++;
+		}
+
+		//for(int i = 0; i < 512; ++i)
+		//{
+			//printf("\n\nCipher Text -------\n%s\n\n", ciphertext);
+			printf("\n\nHASHED PASS\n\n");
+			BIO_dump_fp(stdout, (const char *)hashedpass, strlen((const char *)hashedpass));
+			//printf("\n\nTOTAL -------------\n%s", sendtotal);
+		//}
+		printf("\n\n");
+
+		printf("\n\nTEST\n\n");
+		BIO_dump_fp(stdout, (const char *)test, strlen((const char *)test));
+		
+		send_state = send(sockt, sendtotal, sendtotal_len, 0);	// Send Password to Server
 		if(send_state < 0)
 		{
 			write(2, "Send Failed\n", 12);				// If password send fails, print error

@@ -13,14 +13,16 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <string.h>
+#include <openssl/sha.h>
 
 /* Define Size and Error Variables */
 #define VALID_SIZE		16
 #define INVALID_SIZE		18
 #define PASS_SIZE		50
-#define MSG_SIZE		128
-#define INIT_FAIL		0x3
-#define VALID_FAIL		0x7
+#define MSG_SIZE		256
+#define TOTAL_SIZE		512
+#define INIT_FAIL		0x03
+#define VALID_FAIL		0x07
 #define	INVALID_FAIL		0x11
 #define	INIT_PASS		0x15
 #define PW_FAIL			0x19
@@ -39,10 +41,12 @@
 #define CLIENT_FAIL		0x71
 #define CLIENT_PASS		0x75
 #define DT_FAIL			0x79
+#define HPW_FAIL		0x83
 
 extern int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 extern int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key, unsigned char *iv, unsigned char *ciphertext);
 extern void handleErrors(void);
+extern unsigned char* hash_data(const char* data);
 
 /* Declaration of Global Variables and Initialization of pointers to NULL */
 int beginSocket = 0;
@@ -53,13 +57,15 @@ int status = 0;
 int bind_state = -1;
 int listen_state = -1;
 struct sockaddr_in server, client;					// Server client connection information
-char *pass = NULL;							// Password from file
+uint8_t *pass = NULL;							// Password from file
+uint8_t *hashpass = NULL;
 char *valid = NULL;							// Valid response
 char *invalid = NULL;							// Invalid response
 uint8_t *key;
 uint8_t *iv;
 uint8_t *decryptedtext = NULL;
 int decryptedtext_len = 0;
+uint8_t *test = NULL;
 //int ciphertext_len;
 
 /* Main function for testing */
@@ -149,7 +155,7 @@ int initval(void)
 int readf(void)
 {
 	status = 0;
-	pass = (char *)calloc(PASS_SIZE,sizeof(char));				// Allocate 50 character string for the password
+	pass = (uint8_t *)calloc(PASS_SIZE,sizeof(uint8_t));				// Allocate 50 character string for the password
 	if(pass < 0)
 	{
 		status = PW_FAIL;
@@ -164,11 +170,41 @@ int readf(void)
 		}
 		else
 		{
-			fgets(pass, PASS_SIZE, fp);				// Store the password
-			pass[strcspn(pass, "\n")] = 0;				// Erase null character
+			fgets((char *)pass, PASS_SIZE, fp);				// Store the password
+			pass[strcspn((const char *)pass, "\n")] = 0;				// Erase null character
 			status = READ_PASS;
 		}
 		fclose(fp);							// Close file
+	}
+
+	test = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
+	hashpass = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
+	if(hashpass < 0)
+	{
+		status = HPW_FAIL;
+	}
+	
+	else
+	{
+		hashpass = hash_data((const char *)pass);
+		printf("HASH VALUE = ");
+		for(int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
+		{
+			printf("%x", hashpass[i]);
+		}
+
+		printf("\n");
+		BIO_dump_fp(stdout, (const char *)hashpass, strlen((const char *)hashpass));
+
+		memcpy(test,hashpass,64);
+		printf("HASH VALUE = ");
+		for(int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
+		{
+			printf("%x", test[i]);
+		}
+
+		printf("\n");
+		BIO_dump_fp(stdout, (const char *)test, strlen((const char *)test));
 	}
 	return status;
 }
@@ -280,25 +316,57 @@ void *connection_handler(void *socket_s)
 	int socket = *(int*)socket_s;						// Declare socket
 	int read_size;								// Declare read_size
 	char *client_message = (char *)calloc(MSG_SIZE,sizeof(char));		// Allocate memory for client message
+	char *total_message = (char *)calloc(TOTAL_SIZE,sizeof(char));
+	char *hash_message = (char *)calloc(MSG_SIZE,sizeof(char));
+	int x;
 
 	/* Receive Client Input */
-	while((read_size = recv(socket, client_message, 128, 0))>0)		// While client is open
+	while((read_size = recv(socket, total_message, TOTAL_SIZE, 0))>0)		// While client is open
 	{
-		decryptedtext_len = decrypt((uint8_t *)client_message, read_size, key, iv, decryptedtext);
-		decryptedtext[strcspn((char *)decryptedtext, "\n")] = 0;
+		x = 0;
+		for(int i = 0; total_message[i] != ':'; i++)
+		{
+			x++;
+		}
+
+		strncpy(client_message,total_message,x);
+		read_size = strlen(client_message);
+		
+		int q = 0;
+		for(int i = x+1; total_message[i] != '\0'; i++)
+		{
+			hash_message[q] = total_message[i];
+			q++;
+		}
+
+		BIO_dump_fp(stdout,(const char *)hash_message, strlen((const char *)hash_message));
+		//printf("%s\n", hashpass);
+
+		if(strcmp((char *)test, (char *)hash_message)==0)
+		{
+			decryptedtext_len = decrypt((uint8_t *)client_message, read_size, key, iv, decryptedtext);
+			decryptedtext[strcspn((char *)decryptedtext, "\n")] = 0;
 
 		/* Check password */
-		if(strcmp((char *)decryptedtext, pass) == 0)			// If message is the same as the password
-		{
-			write(socket, valid, VALID_SIZE);			// Print valid
+			if(strcmp((char *)decryptedtext, (char *)pass) == 0)			// If message is the same as the password
+			{
+				write(socket, valid, VALID_SIZE);			// Print valid
+			}
+			else/*if(strcmp((char *)decryptedtext, pass) != 0)*/		// If message is not the same as the password
+			{
+				write(socket, invalid, INVALID_SIZE);			// Print invalid
+			}
 		}
-		else/*if(strcmp((char *)decryptedtext, pass) != 0)*/		// If message is not the same as the password
+		else
 		{
-			write(socket, invalid, INVALID_SIZE);			// Print invalid
+			write(2, "Hash Match Failed\n", 18);
 		}
-
 		free(client_message);						// Free allocated memory
+		free(total_message);
+		free(hash_message);
 		client_message = (char *)calloc(MSG_SIZE,sizeof(char));		// Allocate new memory to password
+		total_message = (char *)calloc(TOTAL_SIZE,sizeof(char));
+		hash_message = (char *)calloc(MSG_SIZE,sizeof(char));
 	}
 
 	if(read_size==0)							// If nothing is received
