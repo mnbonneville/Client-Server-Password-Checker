@@ -11,7 +11,6 @@
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
-#include <string.h>
 #include <openssl/sha.h>
 
 // Define Size and Error Variables */
@@ -33,6 +32,7 @@
 #define CT_FAIL			0x47
 #define HASH_ALLOC_FAIL		0x51
 #define TOTAL_FAIL		0x55
+#define TEST_FAIL		0x59
 
 extern int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 extern int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key, unsigned char *iv, unsigned char *ciphertext);
@@ -80,7 +80,6 @@ int main()
 int initialize_var(void)
 {
 	status = 0;
-	// that typedef thing */ status = INIT_FAIL;
 	message = (uint8_t *)calloc((MSG_SIZE),sizeof(uint8_t));		// Allocate space for a 50 character string for the password input
 	if (message < 0)
 	{
@@ -103,24 +102,31 @@ int initialize_var(void)
 			else
 			{
 				test = (uint8_t *)calloc(HASH_SIZE,sizeof(uint8_t));
-				hashedpass = (uint8_t *)calloc(HASH_SIZE,sizeof(uint8_t));
-				if(hashedpass < 0)
+				if(test < 0)
 				{
-					status = HASH_ALLOC_FAIL;
+					status = TEST_FAIL;
 				}
 				else
-				{	
-					sendtotal = (uint8_t *)calloc(TOTAL,sizeof(uint8_t));
-			
-					if(sendtotal < 0)
+				{
+					hashedpass = (uint8_t *)calloc(HASH_SIZE,sizeof(uint8_t));
+					if(hashedpass < 0)
 					{
-						status = TOTAL_FAIL;
+						status = HASH_ALLOC_FAIL;
 					}
 					else
-					{
-						status = INIT_SUCCESS;
-						key = (uint8_t *)"01234567890123456789012345678901";
-						iv = (uint8_t *)"0123456789012345";
+					{	
+						sendtotal = (uint8_t *)calloc(TOTAL,sizeof(uint8_t));
+				
+						if(sendtotal < 0)
+						{
+							status = TOTAL_FAIL;
+						}
+						else
+						{
+							status = INIT_SUCCESS;
+							key = (uint8_t *)"01234567890123456789012345678901";
+							iv = (uint8_t *)"0123456789012345";
+						}
 					}
 				}
 			}
@@ -191,19 +197,6 @@ int communicate(void)
 		message[strcspn((const char *)message, "\n")] = 0;
 		hashedpass = hash_data((const char *)message);
 		
-		/*uint8_t *cyber = NULL;
-		cyber = hash_data("cybernet");
-		printf("\n\nCYBER\n\n");
-		BIO_dump_fp(stdout, (const char *)cyber, strlen((const char *)cyber));*/
-		
-		/*printf("HASH VALUE = ");
-		for(int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
-		{
-			printf("%x", hashedpass[i]);
-		}
-
-		printf("\n");*/
-
 		memcpy(test,hashedpass,64);
 
 		strcpy((char *)sendtotal,(const char *)ciphertext);
@@ -216,18 +209,6 @@ int communicate(void)
 			sendtotal_len++;
 		}
 
-		//for(int i = 0; i < 512; ++i)
-		//{
-			//printf("\n\nCipher Text -------\n%s\n\n", ciphertext);
-			printf("\n\nHASHED PASS\n\n");
-			BIO_dump_fp(stdout, (const char *)hashedpass, strlen((const char *)hashedpass));
-			//printf("\n\nTOTAL -------------\n%s", sendtotal);
-		//}
-		printf("\n\n");
-
-		printf("\n\nTEST\n\n");
-		BIO_dump_fp(stdout, (const char *)test, strlen((const char *)test));
-		
 		send_state = send(sockt, sendtotal, sendtotal_len, 0);	// Send Password to Server
 		if(send_state < 0)
 		{

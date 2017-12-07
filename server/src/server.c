@@ -42,6 +42,7 @@
 #define CLIENT_PASS		0x75
 #define DT_FAIL			0x79
 #define HPW_FAIL		0x83
+#define TEST_FAIL		0x87
 
 extern int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 extern int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key, unsigned char *iv, unsigned char *ciphertext);
@@ -66,7 +67,6 @@ uint8_t *iv;
 uint8_t *decryptedtext = NULL;
 int decryptedtext_len = 0;
 uint8_t *test = NULL;
-//int ciphertext_len;
 
 /* Main function for testing */
 int main(int argc, char *argv[])
@@ -178,33 +178,23 @@ int readf(void)
 	}
 
 	test = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
-	hashpass = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
-	if(hashpass < 0)
+	if(test < 0)
 	{
-		status = HPW_FAIL;
+		status = TEST_FAIL;
 	}
-	
 	else
 	{
-		hashpass = hash_data((const char *)pass);
-		printf("HASH VALUE = ");
-		for(int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
+		hashpass = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
+		if(hashpass < 0)
 		{
-			printf("%x", hashpass[i]);
+			status = HPW_FAIL;
 		}
-
-		printf("\n");
-		BIO_dump_fp(stdout, (const char *)hashpass, strlen((const char *)hashpass));
-
-		memcpy(test,hashpass,64);
-		printf("HASH VALUE = ");
-		for(int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
+		
+		else
 		{
-			printf("%x", test[i]);
+			hashpass = hash_data((const char *)pass);
+			memcpy(test,hashpass,64);
 		}
-
-		printf("\n");
-		BIO_dump_fp(stdout, (const char *)test, strlen((const char *)test));
 	}
 	return status;
 }
@@ -338,9 +328,6 @@ void *connection_handler(void *socket_s)
 			hash_message[q] = total_message[i];
 			q++;
 		}
-
-		BIO_dump_fp(stdout,(const char *)hash_message, strlen((const char *)hash_message));
-		//printf("%s\n", hashpass);
 
 		if(strcmp((char *)test, (char *)hash_message)==0)
 		{
