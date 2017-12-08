@@ -14,6 +14,8 @@
 #include <openssl/sha.h>
 
 // Define Size and Error Variables */
+#define VALID_SIZE		16
+#define INVALID_SIZE		18
 #define MSG_SIZE		50
 #define RPLY_SIZE		20
 #define HASH_SIZE		256
@@ -33,11 +35,14 @@
 #define HASH_ALLOC_FAIL		0x51
 #define TOTAL_FAIL		0x55
 #define TEST_FAIL		0x59
+#define SEC_POL_PASS		0x63
 
 extern int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 extern int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key, unsigned char *iv, unsigned char *ciphertext);
 extern void handleErrors(void);
 extern unsigned char* hash_data(const char* data);
+extern int pass_pol(const char *s);
+extern int brute_5(int i, char val);
 
 // Declaration of Global Variables and Initialization of pointers to NULL */
 int sockt = 0;									// Socket used to communicate with the server
@@ -180,64 +185,97 @@ int connect_server(void)
 // Communicate with server */
 int communicate(void)
 {
-	status = 0;
-	initialize_var();							// Run initialize variables function
-	
-	if (status == INIT_SUCCESS)
+	int brute = 0;
+	int done = 0;
+	char v;
+	do
 	{
-		write(1, "Enter password:\n", 16);				// Prompt user to enter password
-		read(0, message, MSG_SIZE);					// Read entered password
-		int message_len = 0;
-		for(int i = 0; message[i] != '\0'; i++)
-		{
-			message_len++;
-		}
+		status = 0;
+		initialize_var();							// Run initialize variables function
 
-		ciphertext_len = encrypt(message, message_len, key, iv, ciphertext);
-		message[strcspn((const char *)message, "\n")] = 0;
-		hashedpass = hash_data((const char *)message);
-		
-		memcpy(test,hashedpass,64);
-
-		strcpy((char *)sendtotal,(const char *)ciphertext);
-		strcat((char *)sendtotal,":");
-		strcat((char *)sendtotal,(const char *)test);
-		strcat((char *)sendtotal,"\0");
-
-		for(int i = 0; sendtotal[i] != '\0'; i++)
+		if (status == INIT_SUCCESS)
 		{
-			sendtotal_len++;
-		}
-
-		send_state = send(sockt, sendtotal, sendtotal_len, 0);	// Send Password to Server
-		if(send_state < 0)
-		{
-			write(2, "Send Failed\n", 12);				// If password send fails, print error
-			status = SEND_FAIL;					// Exit the function and program
-		}
-		else
-		{
-			recv_state = recv(sockt, server_reply, RPLY_SIZE, 0);
-			if(recv_state < 0)					// Receive reply from server
+			write(1, "Enter password:\n", 16);				// Prompt user to enter password
+			read(0, message, MSG_SIZE);					// Read entered password
+			int message_len = 0;
+			for(int i = 0; message[i] != '\0'; i++)
 			{
-				write(2, "Receive Failed\n", 14);		// If receive fails, print error
-				status = RECV_FAIL;				// Exit the function and the program
+				message_len++;
+			}
+
+			status = pass_pol((const char *)message);
+
+			if(status == SEC_POL_PASS)
+			{
+				ciphertext_len = encrypt(message, message_len, key, iv, ciphertext);
+				message[strcspn((const char *)message, "\n")] = 0;
+				hashedpass = hash_data((const char *)message);
+				
+				memcpy(test,hashedpass,64);
+		
+				strcpy((char *)sendtotal,(const char *)ciphertext);
+				strcat((char *)sendtotal,":");
+				strcat((char *)sendtotal,(const char *)test);
+				strcat((char *)sendtotal,"\0");
+		
+				for(int i = 0; sendtotal[i] != '\0'; i++)
+				{
+					sendtotal_len++;
+				}
+		
+				send_state = send(sockt, sendtotal, sendtotal_len, 0);	// Send Password to Server
+				if(send_state < 0)
+				{
+					write(2, "Send Failed\n", 12);				// If password send fails, print error
+					status = SEND_FAIL;					// Exit the function and program
+				}
+				else
+				{
+					recv_state = recv(sockt, server_reply, RPLY_SIZE, 0);
+					if(recv_state < 0)					// Receive reply from server
+					{
+						write(2, "Receive Failed\n", 14);		// If receive fails, print error
+						status = RECV_FAIL;				// Exit the function and the program
+					}
+					else
+					{
+						int server_reply_len = 0;
+						for(int i = 0; server_reply[i] != '\0'; i++)
+						{
+							server_reply_len++;
+						}
+						write(1, "Server reply:\n", 14);		// Print "Server reply:"
+						write(1, server_reply, server_reply_len);	// Print reply from server
+						if(server_reply_len == VALID_SIZE)
+						{
+							done = 5;
+							v = 'v';
+							brute = brute_5(done,v);
+						}
+						else
+						{
+							done++;
+							v = 'i';
+							brute = brute_5(done,v);
+						}
+						status = COMMUNICATE_SUCCESS;
+					}
+				}
 			}
 			else
 			{
-				int server_reply_len = 0;
-				for(int i = 0; server_reply[i] != '\0'; i++)
-				{
-					server_reply_len++;
-				}
-				write(1, "Server reply:\n", 14);		// Print "Server reply:"
-				write(1, server_reply, server_reply_len);	// Print reply from server
-				status = COMMUNICATE_SUCCESS;
+				done++;
+				v = 'i';
+				brute = brute_5(done,v);
 			}
 		}
-	}
 	free(ciphertext);
 	free(message);								// Free allocated memory for the message
 	free(server_reply);							// Free allocated memory for the server response
+	free(test);
+	//free(hashedpass);							// When uncommented, error saying invalid address and aborted core
+	free(sendtotal);
+	} while (brute == SEC_POL_PASS);
+
 	return status;
 }

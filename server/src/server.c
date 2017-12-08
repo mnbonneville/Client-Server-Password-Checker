@@ -43,11 +43,14 @@
 #define DT_FAIL			0x79
 #define HPW_FAIL		0x83
 #define TEST_FAIL		0x87
+#define SEC_POL_PASS		0x91
 
 extern int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 extern int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key, unsigned char *iv, unsigned char *ciphertext);
 extern void handleErrors(void);
 extern unsigned char* hash_data(const char* data);
+extern int pass_pol(const char *s);
+extern int c_max(int x);
 
 /* Declaration of Global Variables and Initialization of pointers to NULL */
 int beginSocket = 0;
@@ -57,6 +60,8 @@ int *new_socket = NULL;							// Sockets used
 int status = 0;
 int bind_state = -1;
 int listen_state = -1;
+int num = 0;
+int c_pol = 0;
 struct sockaddr_in server, client;					// Server client connection information
 uint8_t *pass = NULL;							// Password from file
 uint8_t *hashpass = NULL;
@@ -154,6 +159,7 @@ int initval(void)
 /* Open, read, and store the password from the passwords file */
 int readf(void)
 {
+	int pol = 0;
 	status = 0;
 	pass = (uint8_t *)calloc(PASS_SIZE,sizeof(uint8_t));				// Allocate 50 character string for the password
 	if(pass < 0)
@@ -172,28 +178,36 @@ int readf(void)
 		{
 			fgets((char *)pass, PASS_SIZE, fp);				// Store the password
 			pass[strcspn((const char *)pass, "\n")] = 0;				// Erase null character
-			status = READ_PASS;
+			pol = pass_pol((const char *)pass);
+			if(pol == SEC_POL_PASS)
+			{
+				status = READ_PASS;
+			}
 		}
 		fclose(fp);							// Close file
 	}
 
-	test = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
-	if(test < 0)
+
+	if(status == READ_PASS)
 	{
-		status = TEST_FAIL;
-	}
-	else
-	{
-		hashpass = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
-		if(hashpass < 0)
+		test = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
+		if(test < 0)
 		{
-			status = HPW_FAIL;
+			status = TEST_FAIL;
 		}
-		
 		else
 		{
-			hashpass = hash_data((const char *)pass);
-			memcpy(test,hashpass,64);
+			hashpass = (uint8_t *)calloc(MSG_SIZE,sizeof(uint8_t));
+			if(hashpass < 0)
+			{
+				status = HPW_FAIL;
+			}
+		
+			else
+			{
+				hashpass = hash_data((const char *)pass);
+				memcpy(test,hashpass,64);
+			}
 		}
 	}
 	return status;
@@ -223,6 +237,7 @@ int create_socket(void)
 
 int bind_listen(void)
 {
+	status = 0;
 	/* Bind Address Struct to the Socket */
 	bind_state = bind(beginSocket, (struct sockaddr*)&server, sizeof(server));
 	if(bind_state < 0)	// If bind fails
@@ -260,35 +275,38 @@ int accept_client(void)
 	}
 	else
 	{ 
-		while((acceptSocket = accept(beginSocket, (struct sockaddr*)&client, (socklen_t*)&s)))		// While connection accepts
+		while((num <= 5) && (acceptSocket = accept(beginSocket, (struct sockaddr*)&client, (socklen_t*)&s)))		// While connection accepts
 		{
-			write(1, "Connection Accepted\n", 20);							// Print confirmation
-
-			/* Set Up Threading */
-			pthread_t sniffer_thread;				// Declare thread
-			new_socket = calloc(1, sizeof(char));			// Allocate memory
-			if(new_socket < 0)
+			if(num <= 5)
 			{
-				write(2, "Memory Allocation for New Socket Fail.\n", 39);
-				status = NEW_SOCK_ALLOC_FAIL;
-			}
-			else
-			{
-				*new_socket = acceptSocket;			// Set new socket to specific client
-
-				/* Join the thread */
-				if (pthread_create(&sniffer_thread, NULL, connection_handler,(void*)new_socket)<0)
+				write(1, "Connection Accepted\n", 20);							// Print confirmation
+	
+				/* Set Up Threading */
+				pthread_t sniffer_thread;				// Declare thread
+				new_socket = calloc(1, sizeof(char));			// Allocate memory
+				if(new_socket < 0)
 				{
-					write(2, "Could Not Create Thread\n", 24);
-					status = THREAD_FAIL;
+					write(2, "Memory Allocation for New Socket Fail.\n", 39);
+					status = NEW_SOCK_ALLOC_FAIL;
 				}
 				else
 				{
-					write(1, "Client Assigned\n", 16); 	// Print client assigned
-					status = THREAD_PASS;
+					*new_socket = acceptSocket;			// Set new socket to specific client
+	
+					/* Join the thread */
+					if (pthread_create(&sniffer_thread, NULL, connection_handler,(void*)new_socket)<0)
+					{
+						write(2, "Could Not Create Thread\n", 24);
+						status = THREAD_FAIL;
+					}
+					else
+					{
+						write(1, "Client Assigned\n", 16); 	// Print client assigned
+						status = THREAD_PASS;
+					}
 				}
-			}		
-		}
+			}	
+		}	
 		if (acceptSocket<0)						// If socket fails
 		{
 			write(2, "Accept failed\n", 14);			// Print error
@@ -334,8 +352,8 @@ void *connection_handler(void *socket_s)
 			decryptedtext_len = decrypt((uint8_t *)client_message, read_size, key, iv, decryptedtext);
 			decryptedtext[strcspn((char *)decryptedtext, "\n")] = 0;
 
-		/* Check password */
-			if(strcmp((char *)decryptedtext, (char *)pass) == 0)			// If message is the same as the password
+			/* Check password */
+			if(strcmp((char *)decryptedtext, (char *)pass) == 0)		// If message is the same as the password
 			{
 				write(socket, valid, VALID_SIZE);			// Print valid
 			}
@@ -346,7 +364,7 @@ void *connection_handler(void *socket_s)
 		}
 		else
 		{
-			write(2, "Hash Match Failed\n", 18);
+			write(socket, invalid, INVALID_SIZE);
 		}
 		free(client_message);						// Free allocated memory
 		free(total_message);
@@ -359,6 +377,12 @@ void *connection_handler(void *socket_s)
 	if(read_size==0)							// If nothing is received
 	{
 		write(1, "Client Disconnected\n", 20);				// Print disconnected
+		num++;
+		c_pol = c_max(num);
+		if(c_pol != SEC_POL_PASS)
+		{
+			exit(1);
+		}
 		fflush(stdout);							// Flush the stdout
 		status = CLIENT_PASS;
 	}
