@@ -205,8 +205,7 @@ int readf(void)
 		
 			else
 			{
-				hashpass = hash_data((const char *)pass);
-				memcpy(test,hashpass,64);
+				status = READ_PASS;
 			}
 		}
 	}
@@ -347,11 +346,15 @@ void *connection_handler(void *socket_s)
 			q++;
 		}
 
+
+		decryptedtext_len = decrypt((uint8_t *)client_message, read_size, key, iv, decryptedtext);
+		decryptedtext[strcspn((char *)decryptedtext, "\n")] = 0;
+
+		hashpass = hash_data((const char *)decryptedtext);
+		memcpy(test,hashpass,64);
+
 		if(strcmp((char *)test, (char *)hash_message)==0)
 		{
-			decryptedtext_len = decrypt((uint8_t *)client_message, read_size, key, iv, decryptedtext);
-			decryptedtext[strcspn((char *)decryptedtext, "\n")] = 0;
-
 			/* Check password */
 			if(strcmp((char *)decryptedtext, (char *)pass) == 0)		// If message is the same as the password
 			{

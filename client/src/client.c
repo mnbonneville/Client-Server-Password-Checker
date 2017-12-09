@@ -213,10 +213,10 @@ int communicate(void)
 				
 				memcpy(test,hashedpass,64);
 		
-				strcpy((char *)sendtotal,(const char *)ciphertext);
-				strcat((char *)sendtotal,":");
-				strcat((char *)sendtotal,(const char *)test);
-				strcat((char *)sendtotal,"\0");
+				strncpy((char *)sendtotal,(const char *)ciphertext,ciphertext_len);
+				strncat((char *)sendtotal,":",1);
+				strncat((char *)sendtotal,(const char *)test,64);
+				strncat((char *)sendtotal,"\0",1);
 		
 				for(int i = 0; sendtotal[i] != '\0'; i++)
 				{
