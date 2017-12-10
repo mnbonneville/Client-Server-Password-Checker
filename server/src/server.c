@@ -352,7 +352,6 @@ void *connection_handler(void *socket_s)
 
 		hashpass = hash_data((const char *)decryptedtext);
 		memcpy(test,hashpass,64);
-
 		if(strcmp((char *)test, (char *)hash_message)==0)
 		{
 			/* Check password */

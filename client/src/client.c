@@ -210,9 +210,7 @@ int communicate(void)
 				ciphertext_len = encrypt(message, message_len, key, iv, ciphertext);
 				message[strcspn((const char *)message, "\n")] = 0;
 				hashedpass = hash_data((const char *)message);
-				
 				memcpy(test,hashedpass,64);
-		
 				strncpy((char *)sendtotal,(const char *)ciphertext,ciphertext_len);
 				strncat((char *)sendtotal,":",1);
 				strncat((char *)sendtotal,(const char *)test,64);
