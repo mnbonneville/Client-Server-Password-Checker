@@ -1,0 +1,60 @@
+splint src/client.c 
+Splint 3.1.2 --- 03 May 2009
+
+src/client.c:6: Include file <sys/socket.h> matches the name of a POSIX
+    library, but the POSIX library is not being used.  Consider using +posixlib
+    or +posixstrictlib to select the POSIX library, or -warnposix to suppress
+    this message.
+  Header name matches a POSIX header, but the POSIX library is not selected.
+  (Use -warnposixheaders to inhibit warning)
+src/client.c:7:89: Cannot find include file sys/socket.h on search path:
+                      /usr/include;/usr/include
+  Preprocessing error. (Use -preproc to inhibit warning)
+src/client.c:8: Include file <unistd.h> matches the name of a POSIX library,
+    but the POSIX library is not being used.  Consider using +posixlib or
+    +posixstrictlib to select the POSIX library, or -warnposix to suppress this
+    message.
+Preprocessing error for file: /home/cybernet/Documents/CY310/Homework/Client_Ser
+                   ver_Project/clientserverfinal/client/src/client.c
+*** Cannot continue.
+
+
+splint client/src/client.c -nestcomment -warnposixheaders +posixlib -preproc +trytorecover
+Splint 3.1.2 --- 03 May 2009
+
+client/hdr/client.h:4:23: Datatype uint8_t declared with inconsistent type:
+                             unsigned char
+  A function, variable or constant is redefined with a different type. (Use
+  -incondefs to inhibit warning)
+   load file posix.lcd: Specification of uint8_t:
+   arbitrary unsigned integral type
+/usr/include/netinet/in.h:376:51: *** Internal Bug at context.c:4719:
+   Not in global scope as expected: Un-unparseable context: 10
+   access:  /  [errno: 25]
+     *** Please report bug to submit@bugs.debian.org (via reportbug) ***
+       (attempting to continue, results may be incorrect)
+/usr/include/netinet/in.h:376:66: *** Internal Bug at context.c:4719:
+   Not in global scope as expected: Un-unparseable context: 10
+   access:  /  [errno: 25]
+     *** Please report bug to submit@bugs.debian.org (via reportbug) ***
+       (attempting to continue, results may be incorrect)
+/usr/include/netinet/in.h:377:22: *** Internal Bug at context.c:4719:
+   Not in global scope as expected: Un-unparseable context: 10
+   access:  /  [errno: 25]
+     *** Please report bug to submit@bugs.debian.org (via reportbug) ***
+       (attempting to continue, results may be incorrect)
+/usr/include/netinet/in.h:377:44: *** Internal Bug at uentry.c:944:
+             not function: int [errno: 25]
+     *** Please report bug to submit@bugs.debian.org (via reportbug) ***
+       (attempting to continue, results may be incorrect)
+ctbase.i:1911: at source point
+/usr/include/netinet/in.h:377:44: *** Internal Bug at ctbase.i:1911:
+             llassert failed: ctbase_isFunction (c) [errno: 25]
+     *** Please report bug to submit@bugs.debian.org (via reportbug) ***
+       (attempting to continue, results may be incorrect)
+/usr/include/netinet/in.h:377:44: *** Fatal bug: ctbase_baseFunction: bad call:
+             int
+*** Last code point: exprNode.c:10317
+*** Previous code point: exprNode.c:10317
+     *** Please report bug to submit@bugs.debian.org (via reportbug) ***
+

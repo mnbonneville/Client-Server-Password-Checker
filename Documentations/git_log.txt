@@ -1,0 +1,44 @@
+git log
+
+commit eae8533bd1d40cb2595912dd4c6dae081232a40b
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Sat Dec 9 18:41:13 2017 -0800
+
+    Final Commit
+
+commit b400258a66ab683ba6653895afc22db650294cf4
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Sat Dec 9 10:05:04 2017 -0800
+
+    Fixed Hashing Implementation; Changed to more secure functionality
+
+commit 6adcda5a7fc74112f4e443c510c6dafe53804668
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Fri Dec 8 15:04:34 2017 -0800
+
+    CUnit Tests Working; Splint/Flawfinder Ran
+
+commit af858e6ffcf25954001e35f61c62a28d793fc2b8
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Thu Dec 7 21:07:42 2017 -0800
+
+    Security Policies Implemented: 2 on Client, 2 on Server
+
+commit d34b173ba9ea63c32010dcfe04237685110ac8bf
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Thu Dec 7 10:38:29 2017 -0800
+
+    Hash Working with MISRA
+
+commit 0e6a3f931180a0066fc627cebb34f17c4a40eeff
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Thu Dec 7 09:51:01 2017 -0800
+
+    Hashing Function Working
+
+commit 2520096daee1954f5ea1d57ae80e3ba7b420224e
+Author: Mackenzie Bonneville <mnbonneville1s@semo.edu>
+Date:   Tue Dec 5 15:07:59 2017 -0800
+
+    Initial Commit of the Client Server
+

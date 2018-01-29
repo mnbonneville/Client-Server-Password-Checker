@@ -1,0 +1,35 @@
+Flawfinder version 1.31, (C) 2001-2014 David A. Wheeler.
+Number of rules (primarily dangerous function names) in C/C++ ruleset: 169
+Examining src/server.c
+
+FINAL RESULTS:
+
+src/server.c:171:  [2] (misc) fopen:
+  Check when opening files - can an attacker redirect it (via symlinks),
+  force the opening of special file type (e.g., device files), move things
+  around to create a race condition, control its ancestors, or change its
+  contents? (CWE-362).
+src/server.c:209:  [2] (buffer) memcpy:
+  Does not check for buffer overflows when copying to destination (CWE-120).
+  Make sure destination can always hold the source data.
+src/server.c:340:  [1] (buffer) strncpy:
+  Easily used incorrectly; doesn't always \0-terminate or check for invalid
+  pointers (CWE-120).
+src/server.c:341:  [1] (buffer) strlen:
+  Does not handle strings that are not \0-terminated; if given one it may
+  perform an over-read (it could cause a crash if unprotected) (CWE-126).
+
+ANALYSIS SUMMARY:
+
+Hits = 4
+Lines analyzed = 400 in approximately 0.05 seconds (7996 lines/second)
+Physical Source Lines of Code (SLOC) = 353
+Hits@level = [0]   0 [1]   2 [2]   2 [3]   0 [4]   0 [5]   0
+Hits@level+ = [0+]   4 [1+]   4 [2+]   2 [3+]   0 [4+]   0 [5+]   0
+Hits/KSLOC@level+ = [0+] 11.3314 [1+] 11.3314 [2+] 5.66572 [3+]   0 [4+]   0 [5+]   0
+Minimum risk level = 1
+Not every hit is necessarily a security vulnerability.
+There may be other security vulnerabilities; review your code!
+See 'Secure Programming for Linux and Unix HOWTO'
+(http://www.dwheeler.com/secure-programs) for more information.
+

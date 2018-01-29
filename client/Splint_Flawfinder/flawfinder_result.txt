@@ -1,0 +1,42 @@
+Flawfinder version 1.31, (C) 2001-2014 David A. Wheeler.
+Number of rules (primarily dangerous function names) in C/C++ ruleset: 169
+Examining client/src/client.c
+
+FINAL RESULTS:
+
+client/src/client.c:213:  [2] (buffer) memcpy:
+  Does not check for buffer overflows when copying to destination (CWE-120).
+  Make sure destination can always hold the source data.
+client/src/client.c:199:  [1] (buffer) read:
+  Check buffer boundaries if used in a loop including recursive loops
+  (CWE-120, CWE-20).
+client/src/client.c:214:  [1] (buffer) strncpy:
+  Easily used incorrectly; doesn't always \0-terminate or check for invalid
+  pointers (CWE-120).
+client/src/client.c:215:  [1] (buffer) strncat:
+  Easily used incorrectly (e.g., incorrectly computing the correct maximum
+  size to add) (CWE-120). Consider strcat_s, strlcat, or automatically
+  resizing strings. Risk is low because the source is a constant character.
+client/src/client.c:216:  [1] (buffer) strncat:
+  Easily used incorrectly (e.g., incorrectly computing the correct maximum
+  size to add) (CWE-120). Consider strcat_s, strlcat, or automatically
+  resizing strings.
+client/src/client.c:217:  [1] (buffer) strncat:
+  Easily used incorrectly (e.g., incorrectly computing the correct maximum
+  size to add) (CWE-120). Consider strcat_s, strlcat, or automatically
+  resizing strings. Risk is low because the source is a constant character.
+
+ANALYSIS SUMMARY:
+
+Hits = 6
+Lines analyzed = 279 in approximately 0.01 seconds (35936 lines/second)
+Physical Source Lines of Code (SLOC) = 245
+Hits@level = [0]   0 [1]   5 [2]   1 [3]   0 [4]   0 [5]   0
+Hits@level+ = [0+]   6 [1+]   6 [2+]   1 [3+]   0 [4+]   0 [5+]   0
+Hits/KSLOC@level+ = [0+] 24.4898 [1+] 24.4898 [2+] 4.08163 [3+]   0 [4+]   0 [5+]   0
+Minimum risk level = 1
+Not every hit is necessarily a security vulnerability.
+There may be other security vulnerabilities; review your code!
+See 'Secure Programming for Linux and Unix HOWTO'
+(http://www.dwheeler.com/secure-programs) for more information.
+

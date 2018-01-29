@@ -1,0 +1,3 @@
+gcc -Wall -c test.c
+gcc -Wall -L/usr/local/lib -o Client_Test Client_Test.c test.o -lcunit
+./Client_Test 
